@@ -18,10 +18,14 @@ object Freebase {
   def title2Id(id2Title:HashMap[String,String])= id2Title map(_.swap)
 
   def loadFbToWikiMap(f:String,redirect:HashMap[String,String],id2Title:HashMap[String,String])={
-    io.Source.fromFile(f,"UTF-8").getLines().foldLeft(HashMap[String,String]())((map,line)=>{
+    val map = collection.mutable.HashMap[String,String]()
+    for (line <- io.Source.fromFile(f,"UTF-8").getLines()){
       val split = line.split("\t")
-      map + (split(0) -> redirect.getOrElse(split(1),id2Title(split(1))))
-    })
+      if (redirect.contains(split(1))) map += (split(0)->redirect(split(1)))
+      else if (id2Title.contains(split(1))) map += (split(0)->id2Title(split(1)))
+      else println("Not found "+split(1))
+    }
+    map
   }
 
 
@@ -44,7 +48,7 @@ object Freebase {
 
   def createOutFile(f:String,prefix:String="") = {
     val splits = f.split("/")
-    splits.take(splits.length-1).mkString("/")+"/"+prefix+splits(splits.length-1).split(".")(0)+".lst"
+    splits.take(splits.length-1).mkString("/")+"/"+prefix+splits(splits.length-1).split("""\.""")(0)+".lst"
   }
 
   def main(args:Array[String]){
@@ -55,32 +59,40 @@ object Freebase {
     val lexFs = args.takeRight(args.length-3)
 
     val id2title = loadId2Title(idTitleF)
+    println("Done loading id2title..")
     val redirect = loadRedirects(redirectsF,title2Id(id2title))
+    println("Done loading redirects..")
     val fb2Wiki = loadFbToWikiMap(fbWpF,redirect,id2title)
+    println("Done loading fb2wiki..")
     val outLexs = for (f <- lexFs) yield {
       val out = createOutFile(f)
-      try{
-        val writer = new OutputStreamWriter(new FileOutputStream(out),"UTF-8")
-        for (line <- io.Source.fromFile(f).getLines()){
-          writer.write(fb2Wiki(line)+"\n")
-        }
-        writer.close()
-      }
-      catch{
-        case e:Exception => {
-          println("Error while processing file "+f+" : "+e.getMessage)
-          println(e.getStackTraceString)
-        }
-      }
+//      try{
+//        val writer = new OutputStreamWriter(new FileOutputStream(out),"UTF-8")
+//        for (line <- io.Source.fromFile(f).getLines()){
+//          val id = line.split("\t")(0)
+//          if(fb2Wiki.contains(id)){
+//            writer.write(fb2Wiki(id)+"\n")
+//          }
+//        }
+//        writer.close()
+//      }
+//      catch{
+//        case e:Exception => {
+//          println("Error while processing file "+f+" : "+e.getMessage)
+//          println(e.getStackTraceString)
+//        }
+//      }
+//      println("Done "+f+"...")
       out
     }
     val redirects = redirectSet(redirectsF)
     for (f <- outLexs){
-      val out = createOutFile(f,"/redirect.")
+      val out = createOutFile(f,"redirect.")
       try{
         val writer = new OutputStreamWriter(new FileOutputStream(out),"UTF-8")
         for (line <- io.Source.fromFile(f).getLines()){
-          writer.write(redirects(line).mkString("\n")+"\n")
+          if (redirects.contains(line))
+            writer.write(redirects(line).mkString("\n")+"\n")
         }
         writer.close()
       }
@@ -90,6 +102,7 @@ object Freebase {
           println(e.getStackTraceString)
         }
       }
+      println("Done "+out+"...")
     }
 
   }
