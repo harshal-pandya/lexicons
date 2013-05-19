@@ -10,7 +10,7 @@ class FreebaseIdExtractor(freebaseFile:String) {
 
   assert(new File(freebaseFile).exists())
 
-  def runScript(typeName:String,outputFile:String,outputDir:File)={
+  private def runScript(typeName:String,outputFile:String,outputDir:File)={
     val grep = """grep -P "\t"""+typeName.trim+"""$" """+freebaseFile+" > "+outputFile
     val pb = new ProcessBuilder(grep)
     if(outputDir!=null) pb.directory(outputDir)
@@ -18,7 +18,7 @@ class FreebaseIdExtractor(freebaseFile:String) {
     process.waitFor()
   }
 
-  def extractIdsToFiles(types:Seq[String],outputFiles:Seq[String]=Seq[String](),outputDir:File=null){
+  def extractIdsToFiles(types:Iterable[String],outputFiles:Iterable[String]=Seq[String](),outputDir:File=null){
     val typesWithFiles =
       if (outputFiles.size!=0 && outputFiles.size==types.size) { types.zip(outputFiles) }
       else { types.zip(types.map(_.split("""/""").last)) }
