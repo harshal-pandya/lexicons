@@ -1,13 +1,11 @@
 package edu.umass.cs.iesl.harshal.lexicons
 
-import collection.mutable
 import xml.pull._
 import org.apache.commons.lang3.StringEscapeUtils
 import xml.pull.EvElemStart
 import xml.pull.EvText
 import xml.pull.EvElemEnd
 import java.net.URLEncoder
-import util.matching.Regex.Match
 
 /**
  * @author harshal
@@ -36,14 +34,13 @@ case class WikipediaPage(title:String,
     }
   }
 
-  def getAnchorWithContext(text:String,anchorText:String,linksTo:String,offset:Int):Anchor = {
+  private def getAnchorWithContext(text:String,anchorText:String,linksTo:String,offset:Int):Anchor = {
+    import Regexes._
+
     def split(txt:String)={
       val s = txt.split("""\|""")
       s(s.length-1)
     }
-    val Matcher1 = """\[\[(.+?)\]\]""".r
-    val Matcher2 = """(\{\{.*(?=(\}\}))[\}]*)|(\{\{.*)|([^\{\{]*(?=(\}\}))[\}]*)"""
-    val Matcher3 = """[^\p{L}0-9\s,\.]"""
 
     val leftOffset = if(offset>=200) offset-200 else offset
     val rightOffset = if (text.length<offset+200) text.length else offset+200
@@ -56,14 +53,14 @@ case class WikipediaPage(title:String,
       }
 
     val s1 = try{
-      Matcher1.replaceAllIn(leftCover,r=>(split(r.group(1)))).replaceAll(Matcher2," ").split("""\s+""")
+      Matcher1.replaceAllIn(leftCover,r=>(split(r.group(1)))).replaceAll(Matcher7," ").split("""\s+""")
     }catch{
-      case e:Exception=> leftCover.replaceAll(Matcher2," ").split("""\s+""")
+      case e:Exception=> leftCover.replaceAll(Matcher7," ").split("""\s+""")
     }
     val s2 = try{
-      Matcher1.replaceAllIn(rightCover,r=>(split(r.group(1)))).replaceAll(Matcher2," ").split("""\s+""")
+      Matcher1.replaceAllIn(rightCover,r=>(split(r.group(1)))).replaceAll(Matcher7," ").split("""\s+""")
     }catch{
-      case e:Exception=> rightCover.replaceAll(Matcher2," ").split("""\s+""")
+      case e:Exception=> rightCover.replaceAll(Matcher7," ").split("""\s+""")
     }
 
     val left = if(s1.length>=30) s1.takeRight(30).mkString(" ") else s1.mkString(" ")
@@ -71,7 +68,7 @@ case class WikipediaPage(title:String,
     Anchor(anchorText,linksTo,offset,Context(left,right))
   }
 
-  def identifyValidAnchor(t:String,m:String,s:Int)={
+  private def identifyValidAnchor(t:String,m:String,s:Int)={
     import Regexes._
     m match{
       case Matcher5(_) => None
@@ -91,7 +88,7 @@ case class WikipediaPage(title:String,
     }
   }
 
-  def url = {
+  lazy val url = {
     val encoded = URLEncoder.encode(title.replaceAll("""\s""","_"),"UTF-8")
     "http://en.wikipedia.org/wiki/"+encoded
   }
@@ -195,4 +192,6 @@ object Regexes {
   val Matcher3 = """\[\[File:.*?\[\[(.+?)\]\]""".r
   val Matcher4 = """\[\[File:.*?\[\[(.+?)\|(.+?)\]\]""".r
   val Matcher5 = """\[\[(en|de|fr|nl|it|es|pl|ru|ja|pt|zh|sv|vi|uk|ca|no|fi|cs|fa|hu|ko|ro|id|ar|tr|sk|kk|eo|da|sr|lt|eu|ms|he|bg|sl|vo|hr|war|hi|et|gl|nn|az|simple|la|el|th|sh|oc|new|mk|ka|roa-rup|tl|pms|ht|be|te|uz|ta|be-x-old|lv|br|sq|ceb|jv|mg|cy|mr|lb|is|bs|hy|my|yo|an|lmo|ml|fy|pnb|bpy|af|sw|bn|io|ne|gu|zh-yue|scn|ur|ba|nds|ku|ast|qu|su|diq|tt|ga|ky|cv|ia|nap|bat-smg|map-bms|als|wa|kn|am|ckb|sco|gd|bug|tg|mzn|zh-min-nan|yi|vec|hif|arz|roa-tara|nah|os|sah|mn|sa|pam|hsb|li|mi|si|se|co|gan|glk|bar|fo|ilo|bo|bcl|mrj|fiu-vro|nds-nl|ps|tk|vls|gv|rue|pa|xmf|dv|pag|nrm|zea|kv|koi|km|rm|csb|lad|udm|or|mhr|mt|fur|lij|wuu|ug|pi|sc|frr|zh-classical|bh|nov|ksh|ang|so|stq|kw|nv|hak|vep|ay|frp|pcd|ext|szl|gag|gn|ln|ie|haw|eml|xal|pfl|pdc|rw|krc|crh|ace|to|as|ce|kl|arc|dsb|myv|bjn|pap|sn|tpi|lbe|lez|kab|mdf|wo|jbo|av|srn|cbk-zam|bxr|ty|lo|kbd|ab|tet|mwl|ltg|na|kg|ig|nso|za|kaa|zu|rmy|chy|cu|tn|chr|got|cdo|sm|bi|mo|bm|iu|pih|ss|sd|pnt|ee|om|ha|ki|ti|ts|ks|sg|ve|rn|cr|ak|tum|lg|dz|ny|ik|ch|ff|st|fj|tw|xh|ng|ii|cho|mh|aa|kj|ho|mus|kr|hz):""".r
+  val Matcher7 = """(\{\{.*(?=(\}\}))[\}]*)|(\{\{.*)|([^\{\{]*(?=(\}\}))[\}]*)"""
+  val Matcher8 = """[^\p{L}0-9\s,\.]"""
 }
