@@ -9,4 +9,4 @@ and freebase types files from freebase wex dump.
 
 Once you have those, set all the paths in config.property and run maven with the below command:
 
-mvn scala:run -Dlauncher=lexicon
+>mvn scala:run -Dlauncher=lexicon
