@@ -23,8 +23,6 @@ object ProcessDisambiguationPages {
 
   def main(args:Array[String])={
 
-//    val titleWithDisambiguation = """(.+?)\s\(disambiguation\)""".r
-
     val disambiguation = "(disambiguation)"
 
     val prop = new Properties()
@@ -34,7 +32,11 @@ object ProcessDisambiguationPages {
 
     val WpLinkFinder = """\[\[(.+?)\]\]""".r
 
-    val files = new File("/iesl/canvas/harshal/data/freebase/lexicons").listFiles()
+    val lexOutputDir = prop.getProperty("pathToLexiconOutput")
+    val files = new File(lexOutputDir).listFiles().filterNot(f => {
+      val n = f.getName
+      n.contains("redirect") || n.contains("disambiguation") || n.contains("paren")
+    })
 
     val types = (for( f <- files ) yield {
       io.Source.fromFile(f,"UTF-8").getLines().foldLeft(HashSet[String]())((set,line) => {
@@ -56,10 +58,11 @@ object ProcessDisambiguationPages {
             val links = WpLinkFinder.findAllIn(text).matchData
             while(links.hasNext){
               val title = links.next().group(1)
-              if (title.toLowerCase.indexOf(page.title.toLowerCase()) != -1){
+              if (title.toLowerCase.indexOf(page.title.toLowerCase().substring(0,page.title.indexOf(disambiguation)-1)) != -1){
                 val indices = types.zipWithIndex.filter{ case (set,i) => set(title) }.map(_._2)
                 indices.foreach(lexicons(_)+=page.title)
               }
+              else println(title.toLowerCase+" : "+page.title.toLowerCase())
             }
           }
           case _ =>

@@ -108,12 +108,13 @@ class WikipediaDumpProcessor(file:String) extends Iterator[WikipediaPage]{
         case _ =>
       }
     }
-    foundPage
+    reader.hasNext && foundPage
   }
 
   override def next() = {
+    val r = if (hasNext) processPage(reader) else Iterator.empty.next()
     foundPage=false
-    if (hasNext) processPage(reader) else Iterator.empty.next()
+    r
   }
 
   private def processPage(parser : XMLEventReader):WikipediaPage={
@@ -124,7 +125,7 @@ class WikipediaDumpProcessor(file:String) extends Iterator[WikipediaPage]{
     var redirect = ""
     var isRedirect = false
     var done = false
-    while(parser.hasNext & !done){
+    while(parser.hasNext && !done){
       parser.next() match{
         case EvElemStart(_, TITLE, _, _) => title = getText(parser,"title")
         case EvElemStart(_, REDIRECT, attr, _) => {

@@ -4,12 +4,15 @@ import collection.immutable.{HashSet, HashMap}
 import java.io._
 import java.util.Properties
 import collection.JavaConverters._
+import Utils._
 
 /**
  * @author harshal
  * @date: 5/16/13
  */
 object Runner {
+
+  val parenthesis = """\(.+?\)"""
 
   def processWikipedia(wpFile:String,titleIdFile:String,redirectFile:String){
     println("Extracting Title, Id and Redirects from wikipedia dump...")
@@ -73,10 +76,6 @@ object Runner {
     map
   }
 
-  def createOutFile(dir:String,f:String,prefix:String="") = {
-    dir+"/"+prefix+f.split("""\.""")(0)+".txt"
-  }
-
   def generateLexicons(idTitleF:String,redirectsF:String,
                        fb2WpF:String,fbIdTypeFs:Iterable[String],pathToResourcesFolder:String){
     val id2title = loadId2Title(idTitleF)
@@ -87,15 +86,25 @@ object Runner {
     println("Done loading fb2wiki..")
     val outLexs = for (f <- fbIdTypeFs) yield {
       val out = createOutFile(pathToResourcesFolder,f)
+      val parenFile = createOutFile(pathToResourcesFolder,out,"paren")
       try{
         val writer = new OutputStreamWriter(new FileOutputStream(out),"UTF-8")
+        val parenFileWriter = new OutputStreamWriter(new FileOutputStream(parenFile),"UTF-8")
         for (line <- io.Source.fromFile(f).getLines()){
           val id = line.split("\t")(0)
           if(fb2Wiki.contains(id)){
-            writer.write(fb2Wiki(id)+"\n")
+            val title = fb2Wiki(id)
+            parenthesis.r.findFirstIn(title) match {
+              case Some(_) => {
+                val strippedTitle = title.replaceAll("""\s+"""+parenthesis,"");
+                parenFileWriter.write(strippedTitle+"\n")
+              }
+              case None => { writer.write(title+"\n") }
+            }
           }
         }
         writer.close()
+        parenFileWriter.close()
       }
       catch{
         case e:Exception => {
@@ -109,14 +118,26 @@ object Runner {
 
     val redirects = redirectSet(redirectsF)
     for (f <- outLexs){
-      val out = createOutFile(f,"redirect.")
+      val out = createOutFile(pathToResourcesFolder,f,"redirect.")
+      val parenFile = createOutFile(pathToResourcesFolder,out,"paren")
       try{
         val writer = new OutputStreamWriter(new FileOutputStream(out),"UTF-8")
+        val parenFileWriter = new OutputStreamWriter(new FileOutputStream(parenFile),"UTF-8")
         for (line <- io.Source.fromFile(f).getLines()){
-          if (redirects.contains(line))
-            writer.write(redirects(line).mkString("\n")+"\n")
+          if (redirects.contains(line)){
+            for (title <- redirects(line)){
+              parenthesis.r.findFirstIn(title) match {
+                case Some(_) => {
+                  val strippedTitle = title.replaceAll("""\s+"""+parenthesis,"");
+                  parenFileWriter.write(strippedTitle+"\n")
+                }
+                case None => { writer.write(title+"\n") }
+              }
+            }
+          }
         }
         writer.close()
+        parenFileWriter.close()
       }
       catch{
         case e:Exception => {
@@ -126,12 +147,25 @@ object Runner {
       }
       println("Done "+out+"...")
     }
+
+  }
+
+  def removeParen(files:Seq[String])={
+    import java.io._
+    val paren = """\s*\(.+?\)$"""
+    for (f <- files){
+      val writer = new OutputStreamWriter(new FileOutputStream(f+".txt"),"UTF-8")
+      for (line <- io.Source.fromFile(f,"UTF-8").getLines()){
+        writer.write(line.replaceAll(paren,"")+"\n")
+      }
+      writer.close()
+    }
   }
 
   def main(args:Array[String]){
 
     val prop = new Properties()
-    prop.load(new InputStreamReader(this.getClass.getResourceAsStream("/config.properties")))
+    prop.load(this.getClass.getResourceAsStream("/config.properties"))
 
     val wikiDump = prop.getProperty("wikipediaDump")
     val title2IdFile = prop.getProperty("titleToIdFile")

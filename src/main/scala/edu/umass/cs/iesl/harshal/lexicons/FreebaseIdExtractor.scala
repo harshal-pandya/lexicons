@@ -11,9 +11,9 @@ class FreebaseIdExtractor(freebaseFile:String) {
   assert(new File(freebaseFile).exists())
 
   private def runScript(typeName:String,outputFile:String,outputDir:File)={
-    val grep = """grep -P "\t"""+typeName.trim+"""$" """+freebaseFile+" > "+outputFile
-    val pb = new ProcessBuilder(grep)
-    if(outputDir!=null) pb.directory(outputDir)
+    val grep = """grep -P "\t"""+typeName.trim+"""$" """+freebaseFile+" > "+outputFile+".txt"
+    val pb = new ProcessBuilder("bash","-c",grep)
+    if(outputDir!=null && outputDir.exists()) pb.directory(outputDir)
     val process = pb.start()
     process.waitFor()
   }
